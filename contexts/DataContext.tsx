@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { 
     Invoice, Client, Vehicle, Expense, InventoryItem, Asset, AssetCategory, Supplier,
@@ -57,8 +56,9 @@ type DataContextType = {
     handleDeleteRemesa: (remesaId: string) => Promise<void>;
     handleSaveAsientoManual: (asiento: AsientoManual) => Promise<void>;
     handleDeleteAsientoManual: (asientoId: string) => Promise<void>;
-    handleCreateCreditNote: (invoiceId: string) => Promise<void>;
-    handleCreateDebitNote: (invoiceId: string) => Promise<void>;
+    // CORRECCIÓN: Añadido el argumento 'reason' a la definición del tipo
+    handleCreateCreditNote: (invoiceId: string, reason: string) => Promise<void>;
+    handleCreateDebitNote: (invoiceId: string, reason: string) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -422,10 +422,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const handleCreateCreditNote = async (invoiceId: string) => {
+    // --- CORRECCIÓN: RECIBIMOS 'reason' Y LO ENVIAMOS EN EL BODY ---
+    const handleCreateCreditNote = async (invoiceId: string, reason: string) => {
         if (!currentUser) return;
         try {
-            const response = await apiFetch<{ message: string, creditNote: any }>(`/invoices/${invoiceId}/credit-note`, { method: 'POST' });
+            const response = await apiFetch<{ message: string, creditNote: any }>(`/invoices/${invoiceId}/credit-note`, { 
+                method: 'POST',
+                body: JSON.stringify({ motivo: reason }) // Se envía el motivo al backend
+            });
             logAction(currentUser, 'CREAR_NOTA_CREDITO', `Creó Nota de Crédito para factura ${invoiceId}.`, invoiceId);
             addToast({ type: 'success', title: 'Nota de Crédito', message: response.message || 'Nota de Crédito generada exitosamente.' });
         } catch (error: any) {
@@ -433,10 +437,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const handleCreateDebitNote = async (invoiceId: string) => {
+    // --- CORRECCIÓN: RECIBIMOS 'reason' Y LO ENVIAMOS EN EL BODY ---
+    const handleCreateDebitNote = async (invoiceId: string, reason: string) => {
         if (!currentUser) return;
         try {
-            const response = await apiFetch<{ message: string, debitNote: any }>(`/invoices/${invoiceId}/debit-note`, { method: 'POST' });
+            const response = await apiFetch<{ message: string, debitNote: any }>(`/invoices/${invoiceId}/debit-note`, { 
+                method: 'POST',
+                body: JSON.stringify({ motivo: reason }) // Se envía el motivo al backend
+            });
             logAction(currentUser, 'CREAR_NOTA_DEBITO', `Creó Nota de Débito para factura ${invoiceId}.`, invoiceId);
             addToast({ type: 'success', title: 'Nota de Débito', message: response.message || 'Nota de Débito generada exitosamente.' });
         } catch (error: any) {
