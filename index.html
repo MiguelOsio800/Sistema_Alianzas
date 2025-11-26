@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='1' y='3' width='15' height='13' /><polygon points='16 8 20 8 23 11 23 16 16 16 16 8' /><circle cx='5.5' cy='18.5' r='2.5' /><circle cx='18.5' cy='18.5' r='2.5' /></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff">
+    <title>Cooperativa Mixta Fraternidad Del Transporte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            '50': '#f0fdf4',
+                            '100': '#dcfce7',
+                            '200': '#bbf7d0',
+                            '300': '#86efac',
+                            '400': '#4ade80',
+                            '500': '#22c55e',
+                            '600': '#16a34a',
+                            '700': '#15803d',
+                            '800': '#166534',
+                            '900': '#14532d',
+                            '950': '#052e16'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+        if (localStorage.theme === 'dark') {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <style>
+        /* Basic scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media print {
+            body {
+                background-color: white !important;
+            }
+            body > * {
+                display: none;
+            }
+            .printable-area {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: auto;
+                margin: 0;
+                padding: 1rem;
+                box-sizing: border-box;
+            }
+            .printable-area * {
+                color: black !important;
+                border-color: #e5e7eb !important;
+            }
+             .printable-area .bg-gray-50 { background-color: #f9fafb !important; }
+            .printable-area .bg-gray-100 { background-color: #f3f4f6 !important; }
+            .printable-area .bg-primary-500 { background-color: #3b82f6 !important; }
+            .printable-area .text-white { color: white !important; }
+
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "recharts": "https://esm.sh/recharts@^3.0.2",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "jspdf": "https://esm.sh/jspdf@^2.5.1",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "@google/genai": "https://esm.sh/@google/genai"
+  }
+}
+</script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
