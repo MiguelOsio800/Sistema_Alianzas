@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Invoice, CompanyInfo, Client, Category, Office, Permissions } from '../../types';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { XIcon, PackageIcon, DownloadIcon } from '../icons/Icons';
+import { XIcon, PackageIcon, DownloadIcon, SaveIcon, ArrowLeftIcon, ArrowUturnLeftIcon, PlusCircleIcon, ExclamationTriangleIcon } from '../icons/Icons';
 import { calculateFinancialDetails } from '../../utils/financials';
 
-// 1. Actualizamos la interfaz para recibir las nuevas funciones y permisos
 interface InvoiceDetailViewProps {
     isOpen: boolean;
     onClose: () => void;
@@ -16,7 +16,6 @@ interface InvoiceDetailViewProps {
     clients: Client[];
     categories: Category[];
     offices?: Office[];
-    // Nuevas props recibidas desde InvoicesView
     onCreateCreditNote?: (id: string, reason: string) => Promise<void>;
     onCreateDebitNote?: (id: string, reason: string) => Promise<void>;
     permissions?: Permissions;
@@ -30,11 +29,15 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
     clients, 
     categories, 
     offices,
-    onCreateCreditNote, // Recibimos la función
-    onCreateDebitNote,  // Recibimos la función
-    permissions         // Recibimos los permisos
+    onCreateCreditNote,
+    onCreateDebitNote,
+    permissions
 }) => {
     
+    // --- ESTADO PARA MANEJAR EL MODAL DE CONFIRMACIÓN ---
+    const [noteMode, setNoteMode] = useState<'none' | 'credit' | 'debit'>('none');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const sender = clients.find(c => c.id === invoice.guide.sender.id) || invoice.guide.sender;
     const receiver = clients.find(c => c.id === invoice.guide.receiver.id) || invoice.guide.receiver;
     const originOffice = offices?.find(o => o.id === invoice.guide.originOfficeId);
@@ -45,25 +48,42 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
     const formatUsd = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatInvoiceNumber = (num: string) => num.startsWith('F-') ? num : `F-${num}`;
 
-    // --- MANEJADORES PARA LOS BOTONES DE NOTAS ---
-    const handleCreditNoteClick = () => {
-        // Pedimos el motivo al usuario
-        const reason = window.prompt("Ingrese el motivo de la Nota de Crédito (Anulación/Devolución):");
-        if (reason && onCreateCreditNote) {
-            onCreateCreditNote(invoice.id, reason);
-            onClose(); // Cerramos el modal tras la acción
+    // --- NUEVOS MANEJADORES ---
+    
+    // 1. Inicia el modo de nota (muestra confirmación)
+    const startCreditNote = () => {
+        setNoteMode('credit');
+    };
+
+    const startDebitNote = () => {
+        setNoteMode('debit');
+    };
+
+    // 2. Cancela y vuelve a la factura
+    const cancelNote = () => {
+        setNoteMode('none');
+    };
+
+    // 3. Confirma y envía al backend (Con motivo automático)
+    const submitNote = async () => {
+        setIsSubmitting(true);
+        const defaultReason = noteMode === 'credit' ? "Anulación/Devolución solicitada por usuario" : "Nota de Débito solicitada por usuario";
+        
+        try {
+            if (noteMode === 'credit' && onCreateCreditNote) {
+                await onCreateCreditNote(invoice.id, defaultReason);
+                onClose(); // Cierra todo el modal al terminar con éxito
+            } else if (noteMode === 'debit' && onCreateDebitNote) {
+                await onCreateDebitNote(invoice.id, defaultReason);
+                onClose();
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const handleDebitNoteClick = () => {
-        const reason = window.prompt("Ingrese el motivo de la Nota de Débito (Recargo/Ajuste):");
-        if (reason && onCreateDebitNote) {
-            onCreateDebitNote(invoice.id, reason);
-            onClose();
-        }
-    };
-
-    // --- LÓGICA DE PDF (MANTENIDA Y CORREGIDA) ---
     const handleDownloadPdf = async () => {
         const input = document.getElementById('invoice-to-print-display-only');
         if (!input) return;
@@ -106,25 +126,69 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
         }
     };
 
+    // --- RENDERIZADO CONDICIONAL ---
+
+    // Si estamos en modo de crear nota, mostramos Confirmación Simple
+    if (noteMode !== 'none') {
+        const isCredit = noteMode === 'credit';
+        const title = isCredit ? 'Confirmar Nota de Crédito' : 'Confirmar Nota de Débito';
+        const message = isCredit 
+            ? '¿Quiere generar la Nota de Crédito (Anulación)?' 
+            : '¿Quiere generar la Nota de Débito?';
+
+        return (
+            <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+                <div className="p-6 text-center space-y-6">
+                    <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${isCredit ? 'bg-red-100' : 'bg-blue-100'}`}>
+                        <ExclamationTriangleIcon className={`h-6 w-6 ${isCredit ? 'text-red-600' : 'text-blue-600'}`} />
+                    </div>
+                    
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                        {message}
+                    </h3>
+                    
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <p>Esta acción registrará una nota fiscal asociada a la factura <strong>{formatInvoiceNumber(invoice.invoiceNumber)}</strong>.</p>
+                    </div>
+
+                    <div className="flex justify-center gap-4 mt-4">
+                        <Button variant="secondary" onClick={cancelNote} disabled={isSubmitting} className="w-24">
+                            No
+                        </Button>
+                        <Button 
+                            variant={isCredit ? "danger" : "primary"} 
+                            onClick={submitNote}
+                            disabled={isSubmitting}
+                            className="w-24"
+                        >
+                            {isSubmitting ? '...' : 'Sí'}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        );
+    }
+
+    // Vista Normal de la Factura
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Detalle de Factura ${formatInvoiceNumber(invoice.invoiceNumber)}`} size="4xl">
             
-            {/* --- BARRA DE ACCIONES --- */}
-            <div className="flex flex-wrap justify-end gap-2 mb-4 no-print">
-                
-                {/* Botón Nota de Crédito (Solo si tiene permiso de anular y no está anulada) */}
+            <div className="flex flex-wrap justify-end gap-3 mb-4 no-print border-b pb-4 dark:border-gray-700">
                 {permissions?.['invoices.void'] && invoice.status === 'Activa' && onCreateCreditNote && (
-                    <Button type="button" variant="danger" onClick={handleCreditNoteClick} title="Generar Nota de Crédito en HKA">
+                    <Button type="button" variant="danger" onClick={startCreditNote} title="Generar Nota de Crédito (Anular)">
+                        <ArrowUturnLeftIcon className="w-4 h-4 mr-2" />
                         Nota Crédito
                     </Button>
                 )}
 
-                {/* Botón Nota de Débito (Solo si tiene permiso de crear/editar y está activa) */}
                 {permissions?.['invoices.create'] && invoice.status === 'Activa' && onCreateDebitNote && (
-                    <Button type="button" variant="primary" onClick={handleDebitNoteClick} title="Generar Nota de Débito en HKA">
+                    <Button type="button" variant="primary" onClick={startDebitNote} title="Generar Nota de Débito (Ajuste)">
+                        <PlusCircleIcon className="w-4 h-4 mr-2" />
                         Nota Débito
                     </Button>
                 )}
+
+                <div className="border-l mx-2 dark:border-gray-600 h-8 hidden sm:block"></div>
 
                 <Button type="button" variant="secondary" onClick={handleDownloadPdf}>
                     <DownloadIcon className="w-4 h-4 mr-2" />Descargar PDF
@@ -148,6 +212,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         backgroundColor: '#ffffff' 
                     }} 
                 >
+                    {/* ... CONTENIDO DE LA FACTURA (SE MANTIENE IGUAL) ... */}
                     {/* Header Section */}
                     <div className="flex justify-between items-start border-b-2 border-green-600 pb-3 mb-4">
                         <div className="flex items-center gap-4 max-w-[60%]">
@@ -182,9 +247,7 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         </div>
                     </div>
 
-                    {/* Client Information */}
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                        {/* Sender */}
                         <div className="border border-gray-300 rounded-lg p-3 bg-white">
                             <h3 className="font-bold text-[11px] text-gray-700 border-b border-gray-200 pb-1 mb-2">Remitente</h3>
                             <div className="text-[10px] space-y-1">
@@ -197,7 +260,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                                 </p>
                             </div>
                         </div>
-                        {/* Receiver */}
                         <div className="border border-gray-300 rounded-lg p-3 bg-white">
                             <h3 className="font-bold text-[11px] text-gray-700 border-b border-gray-200 pb-1 mb-2">Destinatario</h3>
                             <div className="text-[10px] space-y-1">
@@ -212,7 +274,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         </div>
                     </div>
 
-                    {/* Shipping Conditions */}
                     <div className="bg-gray-50 border-y border-gray-200 py-2 px-2 mb-4 grid grid-cols-4 gap-2 text-[10px]">
                         <div><span className="font-bold">Condición Pago:</span> {invoice.guide.paymentType === 'flete-pagado' ? 'Flete Pagado' : 'Flete a Destino'}</div>
                         <div><span className="font-bold">Moneda Pago:</span> {invoice.guide.paymentCurrency}</div>
@@ -222,7 +283,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         <div><span className="font-bold">Transbordo:</span> {invoice.guide.isTransbordo ? 'SI' : 'NO'}</div>
                     </div>
 
-                    {/* Items Table */}
                     <div className="mb-4">
                         <table className="w-full text-[10px]">
                             <thead className="bg-green-500 text-white font-bold uppercase">
@@ -262,7 +322,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         </table>
                     </div>
 
-                    {/* Footer */}
                     <div className="flex justify-end mb-8">
                         <div className="w-64 bg-gray-50 rounded-lg p-3 border border-gray-200">
                             <div className="text-[10px] space-y-1.5">
@@ -293,7 +352,6 @@ const InvoiceDetailView: React.FC<InvoiceDetailViewProps> = ({
                         </div>
                     </div>
 
-                    {/* Signatures */}
                     <div className="mt-auto pt-8 grid grid-cols-2 gap-20 px-4">
                         <div>
                             <p className="text-[11px] font-bold mb-8 text-center text-black">Recibido Conforme</p>
