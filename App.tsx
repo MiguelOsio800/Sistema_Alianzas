@@ -296,6 +296,7 @@ const AppContent: React.FC = () => {
                     companyInfo={companyInfo}
                     isSidebarCollapsed={isSidebarCollapsed}
                     setIsSidebarCollapsed={setIsSidebarCollapsed}
+                    currentUser={currentUser}
                 />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header 

@@ -1,6 +1,7 @@
+
 import React, { useEffect, useRef } from 'react';
 import { NAV_ITEMS } from '../../constants';
-import { Page, Permissions, CompanyInfo } from '../../types';
+import { Page, Permissions, CompanyInfo, User } from '../../types';
 import { PackageIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '../icons/Icons';
 
 interface SidebarProps {
@@ -11,9 +12,10 @@ interface SidebarProps {
     companyInfo: CompanyInfo;
     isSidebarCollapsed: boolean;
     setIsSidebarCollapsed: (isCollapsed: boolean) => void;
+    currentUser: User;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, permissions, isSidebarOpen, setIsSidebarOpen, companyInfo, isSidebarCollapsed, setIsSidebarCollapsed }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, permissions, isSidebarOpen, setIsSidebarOpen, companyInfo, isSidebarCollapsed, setIsSidebarCollapsed, currentUser }) => {
     const sidebarRef = useRef<HTMLDivElement>(null);
 
     // Close sidebar on link click on mobile
@@ -43,6 +45,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, permissions, isSidebarOp
 
     const visibleNavItems = NAV_ITEMS.filter(item => {
        const key = item.permissionKey;
+       
+       // Special rule: Hide 'asociados' menu item from sidebar for Operators ('role-op').
+       // This allows the permission to be TRUE (so data can be fetched for the Fleet module),
+       // while keeping the dedicated module hidden from the menu to reduce clutter.
+       if (item.id === 'asociados' && currentUser.roleId === 'role-op') {
+           return false;
+       }
+
        return permissions[key];
     });
 

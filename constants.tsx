@@ -218,9 +218,9 @@ const operatorPermissions: Record<string, boolean> = {
     'invoices.view': true, 'invoices.create': true, 'invoices.edit': true, 'invoices.changeStatus': true,
     'flota.view': true,
     'remesas.view': true,
-    'asociados.view': false, // Disabled by default fallback
+    'asociados.view': true, // Enabled to allow data fetching for Fleet module, hidden via Sidebar logic
     'clientes.view': true, 'clientes.create': true, 'clientes.edit': true,
-    'proveedores.view': false, // Disabled by default fallback
+    'proveedores.view': false, 
     // Typically operators can view expenses but maybe not manage all aspects, depends on business logic
     // 'libro-contable.view': true, 
     'inventario.view': true,
@@ -228,7 +228,7 @@ const operatorPermissions: Record<string, boolean> = {
     'inventario-bienes.view': true,
     'bienes-categorias.view': true,
     'reports.view': true,
-    'configuracion.view': false, // Disabled by default fallback
+    'configuracion.view': false, 
     'categories.view': true, 'offices.view': true, 'shipping-types.view': true, 'payment-methods.view': true
 };
 
